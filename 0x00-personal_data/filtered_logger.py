@@ -7,6 +7,9 @@ from log messages.
 import logging
 import re
 from typing import Tuple
+import os
+import mysql.connector
+from mysql.connector import errorcode
 
 # Define PII fields from the given CSV structure
 PII_FIELDS: Tuple[str, ...] = ("name", "email", "phone", "ssn", "password")
@@ -82,3 +85,48 @@ def filter_datum(fields: Tuple[str, ...],
     pattern = r"({})=([^{}]*)".format(
         '|'.join(map(re.escape, fields)), re.escape(separator))
     return re.sub(pattern, lambda m: f"{m.group(1)}={redaction}", message)
+
+
+def get_db() -> mysql.connector.connection.MySQLConnection:
+    """
+    Connects to a MySQL database using environment variables.
+
+    Returns:
+        mysql.connector.connection.MySQLConnection:
+        A connection to the database.
+
+    Raises:
+        ValueError: If the database name is not provided
+        via the environment variables.
+        mysql.connector.Error:
+        If there is an error while connecting to the database.
+    """
+    # Fetching environment variables
+    user = os.getenv('PERSONAL_DATA_DB_USERNAME', 'root')
+    passwd = os.getenv('PERSONAL_DATA_DB_PASSWORD', '')
+    host = os.getenv('PERSONAL_DATA_DB_HOST', 'localhost')
+    db_name = os.getenv('PERSONAL_DATA_DB_NAME')
+
+    # Check if the database name is set
+    if not db_name:
+        raise ValueError(
+            "The database name (PERSONAL_DATA_DB_NAME) is not set in the "
+            "environment variables."
+        )
+
+    try:
+        # Establishing connection to the database
+        connection = mysql.connector.connect(
+            user=user,
+            password=passwd,
+            host=host,
+            database=db_name
+        )
+
+        # If connection is successful, return the connection object
+        return connection
+
+    except mysql.connector.Error as err:
+        # Handle MySQL errors
+        print(f"Error: {err}")
+        raise  # Re-raise the exception for handling elsewhere
