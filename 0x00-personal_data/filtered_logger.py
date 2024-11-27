@@ -129,4 +129,25 @@ def get_db() -> mysql.connector.connection.MySQLConnection:
     except mysql.connector.Error as err:
         # Handle MySQL errors
         print(f"Error: {err}")
-        raise  # Re-raise the exception for handling elsewhere
+        raise  # Re-raise the exception for handling elsewhere in the code
+
+
+def main():
+    """
+    Main function to retrieve and log user data from a MySQL database.
+    """
+    db = get_db()
+    logger = get_logger()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM users;")
+    fields = cursor.column_names
+    for row in cursor:
+        message = "".join("{}={}; ".format(key, value) for key, value in zip(
+            fields, row))
+        logger.info(message.strip())
+    cursor.close()
+    db.close()
+
+
+if __name__ == "__main__":
+    main()
